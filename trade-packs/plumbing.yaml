@@ -1,0 +1,804 @@
+# Trade knowledge pack: residential plumbing (shared base layer)
+# Ground truth for the Prodworth AI receptionist. Trade knowledge only —
+# no business-specific claims. A per-business overlay merges on top of this.
+# See SCHEMA.md for the format. Redlines in this file can never be removed
+# by a business overlay.
+
+trade: plumbing
+version: 1
+description: >-
+  Shared base knowledge for residential plumbing businesses: common services,
+  dispatcher-style qualification questions, emergency safety scripts, lay-term
+  translation, platform redlines, and generic FAQs. National-average price
+  ranges are included for market context only and are never shared with
+  customers by default (shareable: false).
+
+services:
+  - id: water_heater_repair
+    name: Water heater repair
+    description: Diagnose and repair an existing tank or tankless water heater that is not heating, heating inconsistently, making noise, or dripping.
+    synonyms:
+      - hot water heater
+      - hot water tank
+      - no hot water
+      - boiler (common misuse)
+      - water heater not working
+      - pilot light keeps going out
+    qualification_questions:
+      - Is it leaking right now, or just not heating?
+      - Is it gas or electric? Tank or tankless?
+      - Roughly how old is the unit, if you know?
+      - Is it no hot water at all, or does it run out faster than it used to?
+      - Any rumbling, popping, or other new noises?
+      - Do you smell gas near the unit? (If yes, treat as a gas emergency — see emergency scripts.)
+    typical_duration_hours: "1-3"
+    urgency: soon
+    pricing_guidance:
+      range_usd: "150-650 (national average, varies widely by region and what's failed)"
+      shareable: false
+      note: >-
+        Typical repairs fall within standard service-call-to-mid-range repair
+        pricing. Repair vs. replace often turns on unit age — tank units
+        commonly last 8-12 years, so an older unit may be quoted as a
+        replacement instead.
+
+  - id: water_heater_replacement
+    name: Water heater replacement
+    description: Remove and replace a tank or tankless water heater, including haul-away of the old unit.
+    synonyms:
+      - new water heater
+      - replace hot water tank
+      - water heater install
+      - tankless upgrade
+      - boiler replacement (common misuse)
+    qualification_questions:
+      - Is this a planned replacement, or did the old one just fail?
+      - Gas or electric? Tank or tankless — and are you open to switching types?
+      - What size is the current tank (often 40 or 50 gallons — it's on the label)?
+      - Where is the unit — basement, garage, closet, attic? Any tight access or stairs?
+      - Is it leaking right now? (Active leaking raises urgency — see emergency scripts.)
+    typical_duration_hours: "2-4"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "900-3,500 installed (national average, varies widely by region and tank type)"
+      shareable: false
+      note: >-
+        Standard 40-50 gallon tank replacements cluster around $900-1,700;
+        tankless installs run roughly $1,500-3,500 due to venting and gas-line
+        work. Code upgrades (expansion tank, venting, pans) move prices up.
+
+  - id: drain_cleaning
+    name: Drain cleaning
+    description: Clear a slow or blocked drain in a sink, tub, shower, or floor drain using a snake or jetting equipment.
+    synonyms:
+      - clogged drain
+      - blocked drain
+      - slow drain
+      - sink won't drain
+      - backed up sink
+      - snake a drain
+    qualification_questions:
+      - Which drain is it — kitchen, bathroom sink, tub, shower, or floor drain?
+      - Is it completely blocked or just draining slowly?
+      - Is it just that one fixture, or are multiple drains acting up at once? (Multiple fixtures can point to a main line issue.)
+      - How long has it been going on, and is it getting worse?
+      - Have you put any chemical drain cleaner down it? (Techs need to know before working on the line.)
+      - Any sewage smell or water coming up in other fixtures when you run water?
+    typical_duration_hours: "1-2"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "110-500 (national average, varies by region and clog location)"
+      shareable: false
+      note: >-
+        Simple fixture clogs typically run $110-275; jobs needing a camera
+        inspection or hydro-jetting cost more. Main-line clearing runs higher
+        (see sewer_line_cleaning).
+
+  - id: toilet_repair
+    name: Toilet repair
+    description: Fix a running, clogged, weak-flushing, or leaking toilet without replacing it.
+    synonyms:
+      - running toilet
+      - toilet won't flush
+      - clogged toilet
+      - toilet leaking at base
+      - toilet keeps running
+      - jiggling the handle
+    qualification_questions:
+      - What's it doing — running constantly, not flushing, clogged, or leaking?
+      - If it's leaking, is the water at the base of the toilet or from the tank?
+      - Is this the only toilet in the home? (Raises urgency.)
+      - Did anything unusual get flushed — wipes, toys, hygiene products?
+      - Is it overflowing right now? (Active overflow gets shutoff instructions — see emergency scripts.)
+    typical_duration_hours: "1-2"
+    urgency: soon
+    pricing_guidance:
+      range_usd: "100-300 (national average, varies by region)"
+      shareable: false
+      note: >-
+        Most running-toilet and flapper/fill-valve repairs sit at the low end;
+        clogs requiring an auger or pull-and-reset cost more.
+
+  - id: toilet_replacement
+    name: Toilet replacement
+    description: Remove and replace an existing toilet with a new unit, including a new wax seal.
+    synonyms:
+      - new toilet
+      - toilet install
+      - replace toilet
+      - swap out toilet
+    qualification_questions:
+      - Is the old toilet cracked or damaged, or are you upgrading?
+      - Have you bought the new toilet already, or do you want us to supply one?
+      - Standard height or comfort height? Round or elongated bowl, if you know?
+      - Any leaking or soft floor around the base? (May mean flange or subfloor work.)
+    typical_duration_hours: "1-2"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "230-530 for a standard unit, parts and labor (national average, varies by region and fixture)"
+      shareable: false
+      note: >-
+        Higher-end or specialty toilets run more; some markets quote $600-1,000
+        installed. Flange or subfloor repairs are extra.
+
+  - id: faucet_repair_or_replacement
+    name: Faucet repair or replacement
+    description: Repair a dripping or leaking faucet, or remove and install a new faucet for a kitchen, bathroom, or outdoor spigot.
+    synonyms:
+      - leaky faucet
+      - dripping faucet
+      - new faucet
+      - faucet install
+      - outdoor spigot
+      - hose bib
+      - tap is dripping
+    qualification_questions:
+      - Which faucet — kitchen, bathroom, tub/shower, or an outdoor spigot?
+      - Is it dripping from the spout, or leaking from the handles or underneath the sink?
+      - Are you looking to repair it or replace it with a new one?
+      - If replacing, do you have the new faucet already, or should we supply one?
+      - Is water actively leaking into the cabinet below? (May raise urgency.)
+    typical_duration_hours: "1-2"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "150-350 (national average, varies by region and faucet type)"
+      shareable: false
+      note: >-
+        Outdoor spigot/hose bib replacements commonly run a bit higher than
+        simple indoor cartridge swaps.
+
+  - id: leak_detection_and_repair
+    name: Leak detection and pipe repair
+    description: Locate and repair a hidden or visible water leak in supply piping, walls, ceilings, or under fixtures.
+    synonyms:
+      - water leak
+      - pipe leak
+      - leak in wall
+      - wet spot on ceiling
+      - hidden leak
+      - high water bill
+      - water stain
+    qualification_questions:
+      - Where do you see water or damage — and can you tell where it's coming from?
+      - Is it actively leaking right now — a drip, a steady stream, or more?
+      - Have you shut off the water to that fixture or at the main? (If it's active, walk them through the main shutoff — see emergency scripts.)
+      - When did you first notice it, and is it getting worse?
+      - Any recent jump in your water bill, or did the water utility flag a leak?
+      - Is any water near outlets, appliances, or your electrical panel? (Safety flag.)
+    typical_duration_hours: "1-4"
+    urgency: soon
+    pricing_guidance:
+      range_usd: "200-600 for detection; repair cost depends heavily on location and access (national average, varies by region)"
+      shareable: false
+      note: >-
+        An exposed, accessible pipe repair is far cheaper than one inside a
+        wall, ceiling, or slab. Detection and repair are often billed
+        separately.
+
+  - id: sewer_line_cleaning
+    name: Main sewer line cleaning
+    description: Clear a blockage in the main sewer line between the home and the street, often with a camera inspection, auger, or hydro-jetting.
+    synonyms:
+      - main line clog
+      - sewer line clogged
+      - sewer backup
+      - multiple drains backed up
+      - sewer scope
+      - hydro jetting
+    qualification_questions:
+      - Are multiple fixtures backing up at once — like the tub filling when the toilet flushes?
+      - Is sewage or wastewater coming up into any living space right now? (If yes, treat as sewage backup — see emergency scripts.)
+      - When was the main line last cleaned or scoped, if ever?
+      - Any large trees near the sewer line's path to the street?
+      - Does the problem get worse when you run a lot of water, like laundry?
+    typical_duration_hours: "1-3"
+    urgency: soon
+    pricing_guidance:
+      range_usd: "100-800 for basic clearing; up to about 2,200 with camera inspection or jetting (national average, varies by region)"
+      shareable: false
+      note: >-
+        Root intrusion is the usual suspect in recurring main-line clogs.
+        Recurring clogs often lead to a repair or replacement conversation.
+
+  - id: sewer_line_repair
+    name: Sewer line repair or replacement
+    description: Repair or replace a damaged main sewer line, including spot repairs, trenchless methods, or full replacement.
+    synonyms:
+      - broken sewer line
+      - collapsed sewer pipe
+      - sewer line replacement
+      - trenchless sewer repair
+      - roots in sewer line
+    qualification_questions:
+      - Has a camera inspection already been done? Do you have the footage or a report?
+      - Is this recurring — has the line been cleared before and backed up again?
+      - Do you know roughly how old the line is, or what material (clay, cast iron, PVC)?
+      - Is sewage backing up into the home right now? (If yes, treat as sewage backup — see emergency scripts.)
+      - Is the home on a city sewer connection or a septic system? (Septic is often a different scope — clarify before booking.)
+    typical_duration_hours: "4-16 (1-2 days for full replacement)"
+    urgency: soon
+    pricing_guidance:
+      range_usd: "1,300-5,000 for typical repairs; full replacement roughly 3,000-15,000 and can reach 25,000+ (national average, varies widely by region, depth, and method)"
+      shareable: false
+      note: >-
+        Trenchless methods can cost more per foot but avoid excavation.
+        Anything beyond a spot repair should be treated as an estimate visit,
+        not a flat booking.
+
+  - id: garbage_disposal_service
+    name: Garbage disposal repair or replacement
+    description: Repair a jammed, humming, or leaking garbage disposal, or remove and install a new unit.
+    synonyms:
+      - disposal
+      - garbage disposal not working
+      - disposal humming
+      - disposal jammed
+      - new garbage disposal
+      - Insinkerator (brand used generically)
+    qualification_questions:
+      - What's it doing — humming but not spinning, totally dead, leaking, or just clogged?
+      - Is water backing up into the sink when you run it?
+      - How old is the unit, roughly? (Older units are usually replaced rather than repaired.)
+      - Is the leak from the disposal itself or the pipes around it?
+    typical_duration_hours: "1-2"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "150-600 (national average, varies by region and whether it's a repair or replacement)"
+      shareable: false
+      note: >-
+        Replacement with a mid-range unit typically lands in the middle of the
+        range; simple resets and unjamming at the low end.
+
+  - id: sump_pump_service
+    name: Sump pump repair or replacement
+    description: Repair or replace a sump pump, or add a battery backup system to protect a basement from flooding.
+    synonyms:
+      - sump pump not working
+      - sump pump replacement
+      - basement pump
+      - sump pit
+      - battery backup pump
+    qualification_questions:
+      - Is the pump not running at all, running constantly, or making strange noises?
+      - Is there water in the basement or rising in the pit right now? (Active flooding raises urgency.)
+      - Roughly how old is the pump?
+      - Do you have a battery backup, or is the pump your only protection?
+      - Is heavy rain expected or ongoing in your area? (Affects triage timing.)
+    typical_duration_hours: "1-3"
+    urgency: soon
+    pricing_guidance:
+      range_usd: "300-800 for a standard replacement; battery backup systems roughly 1,000-2,500 installed (national average, varies by region)"
+      shareable: false
+      note: >-
+        Submersible units cost more than pedestal units. Failure during a
+        storm is an emergency for homes that flood easily.
+
+  - id: repiping
+    name: Whole-house repiping
+    description: Replace all or most of a home's water supply piping, typically with PEX or copper.
+    synonyms:
+      - repipe
+      - new pipes
+      - replace all plumbing
+      - polybutylene replacement
+      - galvanized pipe replacement
+      - re-piping
+    qualification_questions:
+      - What prompted this — recurring leaks, low pressure, discolored water, or an inspection finding?
+      - Do you know what kind of pipes you have now (galvanized, copper, polybutylene, PEX)?
+      - Roughly how old is the home, and how many bathrooms?
+      - Have you had multiple pipe leaks in the past few years? (Repeated leaks often justify repiping over patching.)
+      - Is the home occupied during the work? (Sets expectations for water shutoffs.)
+    typical_duration_hours: "16-40 (2-5 days)"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "4,000-15,000 for most single-family homes (national average, varies widely by region, size, and material)"
+      shareable: false
+      note: >-
+        This is always an estimate visit, never a phone/booking price. PEX is
+        generally cheaper than copper; wall repair may or may not be included.
+
+  - id: slab_leak_repair
+    name: Slab leak detection and repair
+    description: Locate and repair a water line leaking under a concrete slab foundation.
+    synonyms:
+      - slab leak
+      - leak under foundation
+      - hot spot on floor
+      - water under floor
+      - leak under slab
+    qualification_questions:
+      - What makes you suspect a slab leak — high water bill, warm spots on the floor, sound of running water, or cracks?
+      - Can you hear water running when everything in the house is turned off?
+      - Has a leak detection company or plumber already pinpointed it?
+      - How old is the home, and do you know the pipe material?
+      - Any visible water pooling at the foundation or flooring damage?
+    typical_duration_hours: "3-8"
+    urgency: soon
+    pricing_guidance:
+      range_usd: "1,500-4,500 for repair; detection often billed separately (national average, varies widely by region and repair method)"
+      shareable: false
+      note: >-
+        Direct-access repair, rerouting, and tunneling vary hugely in cost.
+        Always an estimate visit after detection.
+
+  - id: gas_line_service
+    name: Gas line repair or installation
+    description: Repair, extend, or install gas piping for appliances like water heaters, ranges, dryers, or outdoor grills.
+    synonyms:
+      - gas line
+      - gas pipe
+      - run a gas line
+      - gas line for stove
+      - gas line for grill
+    qualification_questions:
+      - Is this a repair to an existing line or a new line installation?
+      - "IMPORTANT: Do you smell gas right now? (If yes, stop booking and follow the gas leak emergency script — 911 and the gas utility first.)"
+      - What appliance is the line for?
+      - Where would the line run from and to, roughly?
+      - Is this propane or natural gas, if you know?
+    typical_duration_hours: "2-6"
+    urgency: soon
+    pricing_guidance:
+      range_usd: "500-2,000 for typical installations (national average, varies widely by region and line length)"
+      shareable: false
+      note: >-
+        Gas work often requires permits and pressure testing; licensing
+        requirements for gas fitting vary by state — the business overlay
+        should state what they're licensed for.
+
+  - id: water_service_line_replacement
+    name: Main water service line replacement
+    description: Repair or replace the underground water line running from the meter to the home.
+    synonyms:
+      - water main
+      - main water line
+      - water line to house
+      - service line leak
+      - yard leak
+    qualification_questions:
+      - Was this flagged by the water utility, or are you seeing signs yourself (wet yard, high bill, low pressure)?
+      - Is there standing water or a soggy area in the yard, especially between the meter and the house?
+      - Is water getting into the home anywhere?
+      - Roughly how old is the home, and do you know the line material?
+      - Has the utility confirmed the leak is on your side of the meter?
+    typical_duration_hours: "4-8"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "2,000-6,000+ (national average, varies widely by region, length, and depth)"
+      shareable: false
+      note: >-
+        Homeowner responsibility typically starts at the property line or
+        meter — the utility handles the street side. Trenchless pull methods
+        can reduce digging.
+
+  - id: shower_or_tub_service
+    name: Shower or tub repair
+    description: Repair or replace shower valves, cartridges, tub spouts, and showerheads; address poor temperature control or dripping at the shower.
+    synonyms:
+      - shower valve
+      - shower cartridge
+      - shower won't get hot
+      - shower dripping
+      - tub spout
+      - shower handle broken
+    qualification_questions:
+      - What's the symptom — dripping, no hot water at that shower only, or a broken handle?
+      - Is it just this shower, or are other fixtures having hot water issues too? (Separates valve issues from water heater issues.)
+      - Do you know the brand of the valve or fixture (often on the handle or plate)?
+      - Is there an access panel behind the shower, or is it tiled on both sides?
+      - Any leaking into the room or ceiling below?
+    typical_duration_hours: "1-3"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "225-575 for a shower valve replacement (national average, varies by region and access)"
+      shareable: false
+      note: >-
+        Cartridge swaps are cheaper than full valve replacements; no rear
+        access panel can add wall work.
+
+  - id: fixture_installation
+    name: Fixture installation
+    description: Install customer-supplied or company-supplied fixtures such as sinks, vanities, and laundry hookups.
+    synonyms:
+      - install a sink
+      - new vanity
+      - bathroom remodel plumbing
+      - hook up washing machine
+      - laundry hookup
+    qualification_questions:
+      - What are we installing, and is it a swap in the same spot or a new location?
+      - Do you have the fixture already, or do you need us to supply it?
+      - Is this part of a larger remodel with other trades involved?
+      - Are the existing shutoff valves and drain in good shape, as far as you know?
+    typical_duration_hours: "1-4"
+    urgency: routine
+    pricing_guidance:
+      shareable: false
+      note: >-
+        No reliable national range established — varies widely by fixture and
+        whether supply/drain lines need modification. The business overlay
+        should provide its own figures.
+
+  - id: frozen_pipe_service
+    name: Frozen pipe thawing and repair
+    description: Safely thaw frozen water lines and repair any sections that cracked or burst from freezing.
+    synonyms:
+      - frozen pipes
+      - pipes froze
+      - no water in cold weather
+      - burst pipe from freeze
+      - winterize
+    qualification_questions:
+      - Is any pipe visibly cracked, bulging, or leaking — or do you just have no water at some faucets?
+      - Which fixtures have no water, and are they on exterior walls?
+      - Have you shut off the main water valve? (If anything has burst, they should — see emergency scripts.)
+      - How cold has it been, and is the heat on in the area where the pipes froze?
+      - Have the pipes frozen before in the same spot?
+    typical_duration_hours: "1-4"
+    urgency: soon
+    pricing_guidance:
+      shareable: false
+      note: >-
+        No reliable national range established — cost depends entirely on
+        whether it's thawing only or repairing burst sections, and where the
+        damaged pipe is.
+
+  - id: water_softener_service
+    name: Water softener installation or service
+    description: Install, replace, or service a water softener or whole-home water treatment system.
+    synonyms:
+      - water softener
+      - hard water
+      - water conditioner
+      - whole house filter
+      - water filtration
+    qualification_questions:
+      - Do you have an existing softener that needs service, or is this a new install?
+      - What problem are you trying to solve — scale buildup, taste, or a water test result?
+      - Is there a drain and power outlet near where the main line enters the home?
+      - City water or well water?
+    typical_duration_hours: "2-4"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "roughly 2,000-3,000 installed (limited national data; single regional source, varies widely by system)"
+      shareable: false
+      note: >-
+        Pricing data is thin for this service nationally. Treat any figure as
+        rough; the business overlay should supply real numbers.
+
+  - id: backflow_prevention_service
+    name: Backflow prevention testing and installation
+    description: Test, repair, or install backflow prevention devices, which many water utilities require to be tested annually.
+    synonyms:
+      - backflow test
+      - backflow preventer
+      - backflow certification
+      - RPZ valve
+      - utility sent me a letter
+    qualification_questions:
+      - Did your water utility send you a notice requiring a test or installation?
+      - Is there an existing device that needs its annual test, or is this a new install?
+      - What does the device serve — irrigation system, fire line, or the whole home?
+      - Is there a deadline on the utility's notice?
+    typical_duration_hours: "1-2"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "75-250 for testing; around 350 for a typical residential install (national average, varies by region)"
+      shareable: false
+      note: >-
+        Testers often need a state-specific certification — the business
+        overlay should confirm they offer this before booking.
+
+  - id: low_water_pressure_visit
+    name: Low water pressure diagnosis
+    description: Investigate weak water pressure at one fixture or throughout the home.
+    synonyms:
+      - low water pressure
+      - weak water pressure
+      - water pressure dropped
+      - barely any water coming out
+    qualification_questions:
+      - Is it one fixture or the whole house?
+      - Is it hot water only, cold only, or both?
+      - Did it drop suddenly or get worse gradually?
+      - Do you know if your home has a pressure regulator (usually near the main shutoff)?
+      - Any recent plumbing work, or utility work on your street?
+    typical_duration_hours: "1-2"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "45-200 for the diagnostic visit; repair depends on the cause (national average, varies by region)"
+      shareable: false
+      note: >-
+        Diagnostic/service-call pricing only; fixes range from a clogged
+        aerator to a failed regulator to a service-line problem.
+
+  - id: general_plumbing_diagnostic
+    name: General plumbing inspection or diagnostic visit
+    description: On-site inspection for plumbing issues that don't map to a specific service, or when the customer can't describe the problem clearly.
+    synonyms:
+      - plumbing inspection
+      - not sure what's wrong
+      - weird plumbing noise
+      - banging pipes
+      - water hammer
+      - strange smell from pipes
+      - pre-purchase plumbing check
+    qualification_questions:
+      - Can you describe what you're seeing, hearing, or smelling, and where?
+      - When did it start, and does anything specific trigger it (running water, flushing, laundry)?
+      - Is there any active leaking or water damage right now?
+      - Is this for a home you're buying or selling, or your current home?
+    typical_duration_hours: "1-2"
+    urgency: routine
+    pricing_guidance:
+      range_usd: "45-200 for the diagnostic visit (national average, varies by region)"
+      shareable: false
+      note: >-
+        Catch-all for anything that doesn't fit a defined service. The AI
+        should never guess at a diagnosis — booking this visit is the correct
+        outcome.
+
+emergency_scripts:
+  # Immediate safety actions ONLY. No diagnostics, no repair instructions.
+  # book_emergency_visit: false means "do not book — direct to 911/utility first."
+  - name: Suspected gas leak
+    trigger_keywords:
+      - gas smell
+      - smell gas
+      - rotten egg
+      - sulfur smell
+      - gas leak
+      - hissing near gas line
+    customer_instructions: |
+      Leave the building immediately and get everyone (including pets) out.
+      Do NOT touch light switches, phones, appliances, or anything electrical on the way out. Do not try to find the leak yourself.
+      Once you're safely outside, call 911 and your gas utility's emergency line.
+      Don't go back inside until the fire department or utility says it's safe.
+      After they clear it, we can send a licensed pro for the gas line repair.
+    book_emergency_visit: false
+
+  - name: Burst pipe or active flooding
+    trigger_keywords:
+      - burst pipe
+      - pipe burst
+      - water everywhere
+      - flooding
+      - water pouring
+      - ceiling leaking badly
+      - water gushing
+    customer_instructions: |
+      Shut off the main water valve right now — it's usually where the water line enters the house (basement, crawl space, garage, or near the water heater). Turn it clockwise until it stops.
+      If you can't find or turn it, your water utility can often shut it off at the meter.
+      If water is near outlets, appliances, or your electrical panel, shut off power to that area at the breaker — only if you can reach it without stepping in water. If you can't, stay clear of the water.
+      Move valuables and furniture out of the water's path if it's safe to do so.
+    book_emergency_visit: true
+
+  - name: Sewage backup
+    trigger_keywords:
+      - sewage backup
+      - sewer backup
+      - sewage in basement
+      - toilet backing up
+      - sewage coming up
+      - poop water
+      - black water
+    customer_instructions: |
+      Stop using all water in the house right away — no flushing, no sinks, no showers, no laundry. Everything you run adds to the backup.
+      Keep people and pets out of the affected area. Sewage water is contaminated and can make you sick — don't touch it or try to clean it up yourself.
+      If water is near outlets or your electrical panel, stay out of it and shut off power to that area at the breaker only if you can reach it without entering the wet area.
+    book_emergency_visit: true
+
+  - name: No water in the whole home
+    trigger_keywords:
+      - no water
+      - no water in house
+      - water completely off
+      - nothing comes out of faucets
+    customer_instructions: |
+      First, check whether your neighbors have water. If they're out too, it's a utility issue — contact your water provider.
+      If it's just your home, look and listen for signs of a leak: the sound of running water, wet spots, or pooling. If you find any, shut off the main water valve right away.
+      In freezing weather, no water at some faucets can mean frozen pipes — don't use any open flame on pipes; that's a fire hazard.
+      Let us know what you find and we'll get someone out.
+    book_emergency_visit: true
+
+  - name: Frozen pipes
+    trigger_keywords:
+      - frozen pipe
+      - pipes frozen
+      - no water cold weather
+      - frost on pipes
+    customer_instructions: |
+      Never use a torch, propane heater, or any open flame to thaw a pipe — it's a serious fire hazard.
+      Check the exposed pipes you can see: if you find a crack, bulge, or any leak, shut off the main water valve immediately and don't run that faucet.
+      If nothing has burst, keep the affected faucet open and keep the area warm until a plumber can thaw the line safely.
+      If a pipe bursts, follow the burst pipe steps: main valve off, power off near water only if safe.
+    book_emergency_visit: true
+
+  - name: Water heater leaking
+    trigger_keywords:
+      - water heater leaking
+      - water heater burst
+      - tank leaking
+      - puddle around water heater
+      - water heater flooding
+    customer_instructions: |
+      Turn off the cold-water shutoff valve on the pipe going into the top of the water heater (turn clockwise).
+      If it's electric, switch off the water heater's breaker. If it's gas, turn the dial on the gas control to OFF. Only do either if you can reach them safely, without standing in water.
+      Keep clear of any water near outlets or cords.
+      Once the water and power/gas are off, the immediate risk is handled — we'll get you scheduled for repair or replacement.
+    book_emergency_visit: true
+
+  - name: Toilet overflowing
+    trigger_keywords:
+      - toilet overflowing
+      - toilet overflow
+      - toilet won't stop
+      - toilet flooding
+    customer_instructions: |
+      Don't flush again.
+      Turn off the small valve on the wall behind the toilet (turn clockwise) to stop the water.
+      Mop up standing water to protect the floor.
+      If this is the only toilet in your home, tell us — that makes it urgent.
+    book_emergency_visit: true
+
+terminology_map:
+  - customer_says: "my boiler is broken"
+    might_mean: [water_heater_repair, water_heater_replacement]
+    clarify_with: "Quick check — is that the unit that makes your tap water hot, or the one that heats your home? Home heating systems are a different trade (HVAC), and we want to send the right pro."
+
+  - customer_says: "hot water heater"
+    might_mean: [water_heater_repair, water_heater_replacement]
+    clarify_with: "Got it — your water heater. Is it leaking, or just not making hot water?"
+
+  - customer_says: "septic tank problem"
+    might_mean: [sewer_line_cleaning, sewer_line_repair]
+    clarify_with: "Is your home on a septic system or connected to city sewer? Septic pumping and tank work are often a different service — let me confirm what we handle."
+
+  - customer_says: "spigot" 
+    might_mean: [faucet_repair_or_replacement]
+    clarify_with: "That's the outdoor faucet — also called a hose bib. Is it dripping, or did it crack over the winter?"
+
+  - customer_says: "sump pump (when they actually mean a pump under a basement bathroom)"
+    might_mean: [sump_pump_service]
+    clarify_with: "Is this a pump in a pit that handles groundwater, or one that pumps wastewater up from a basement bathroom? The second is a sewage ejector pump — different equipment, so I want to note it correctly."
+
+  - customer_says: "dishwasher won't drain"
+    might_mean: [garbage_disposal_service, drain_cleaning]
+    clarify_with: "When the dishwasher backs up, does water come up in the kitchen sink too? That tells us whether it's the drain line or the dishwasher itself — dishwasher repairs are sometimes an appliance tech's job."
+
+  - customer_says: "the city says I have a leak"
+    might_mean: [leak_detection_and_repair, water_service_line_replacement]
+    clarify_with: "Did the utility say the leak is on your side of the meter, or are you guessing from a high bill? Either way we can locate it — just helps us send the right equipment."
+
+  - customer_says: "banging pipes"
+    might_mean: [general_plumbing_diagnostic, low_water_pressure_visit]
+    clarify_with: "When does it bang — right when you shut off a faucet, or while water is running? (That's called water hammer; a plumber can check it on a diagnostic visit.)"
+
+  - customer_says: "my drain smells bad"
+    might_mean: [drain_cleaning, sewer_line_cleaning]
+    clarify_with: "Is the smell at one drain, or throughout the house? And are any drains backing up along with it?"
+
+  - customer_says: "water filter / water treatment"
+    might_mean: [water_softener_service]
+    clarify_with: "Are you looking at a softener for hard water, or a filtration system for taste and drinking water? We handle one or both depending on the system."
+
+redlines:
+  # Platform-level rules. A business overlay can ADD redlines but can never
+  # remove or weaken these. Redlines always union across layers.
+  - id: no_exact_quotes
+    rule: Never quote an exact or total price over text. Only share ranges the business has explicitly marked shareable; never share the trade pack's internal market ranges with customers.
+  - id: no_diagnosis_over_text
+    rule: Never diagnose the cause of a problem ("it's probably the anode rod", "sounds like tree roots"). Describe only what the customer reported, and book a visit for anything uncertain.
+  - id: no_diy_repair_instructions
+    rule: Never give repair, thawing, unclogging, or part-replacement instructions. The only permissible customer instructions are the immediate safety and damage-mitigation steps in emergency_scripts.
+  - id: no_guarantees_or_warranties
+    rule: Never guarantee outcomes, completion times, or warranty coverage. Don't promise a fix will "solve it for good" or that work is "guaranteed" unless the business overlay states an actual policy, and even then only repeat it verbatim.
+  - id: no_insurance_claims
+    rule: Never say whether homeowner's insurance will or won't cover anything. Direct all coverage questions to the customer's insurer.
+  - id: no_licensing_claims
+    rule: Never claim the business is licensed, insured, bonded, or certified unless the business overlay explicitly states it. Never state license numbers not present in the overlay.
+  - id: no_competitor_disparagement
+    rule: Never criticize, compare, or comment on other plumbing companies, including big national brands.
+  - id: no_invented_scheduling
+    rule: Never state appointment times, arrival windows, or ETAs not provided by the scheduler. Never promise "someone can come right away" — offer only actual available slots.
+  - id: emergency_services_first
+    rule: For suspected gas leaks, carbon monoxide, or any life-safety situation, always direct the customer to 911 and/or the utility first. Never book a visit as a substitute for emergency services.
+
+faq:
+  - q: Do plumbers give free estimates?
+    a: It varies by company. Many charge a service or diagnostic fee for the visit, and some credit it toward the work if you go ahead. I can check this company's exact policy for you.
+  - q: How soon can someone come out?
+    a: That depends on the schedule and how urgent your situation is. Let me get a few details and I'll show you the earliest actual openings we have.
+  - q: Is there a service call fee?
+    a: Most plumbing companies charge a trip or diagnostic fee for coming out, and the technician quotes the repair itself on-site before any work starts. I can confirm this company's fee before we book.
+  - q: Should I use a chemical drain cleaner first?
+    a: Many plumbers advise against chemical drain cleaners — they can be hard on pipes and rarely clear the whole blockage. Mechanical clearing by a pro is the safer route. If you've already used one, tell us so the tech knows before working on the line.
+  - q: Should I repair or replace my water heater?
+    a: It usually comes down to age and what's wrong. Tank water heaters commonly last about 8-12 years, so a major repair on an older unit often doesn't pencil out. The technician can look at yours and lay out both options with real prices.
+  - q: How long do water heaters last?
+    a: Traditional tank units typically last about 8-12 years; tankless units often last 15-20 years. Maintenance and water quality make a big difference.
+  - q: Tank vs. tankless water heater — which is better?
+    a: Neither is universally better. Tankless units cost more upfront but last longer and heat water on demand; tanks are cheaper to install and simpler. Household size, usage, and fuel type all matter — the technician can recommend based on your home.
+  - q: Why did my water bill suddenly jump?
+    a: A sudden jump often points to a hidden leak — sometimes something as small as a running toilet, sometimes a line under the yard or slab. A plumber can do leak detection to find it.
+  - q: What should I do before the plumber arrives?
+    a: Clear the area around the problem so the tech can get to it, know where your main water shutoff is if you can, and secure any pets. If the issue involves active leaking, let us know right away so we can walk you through shutting the water off.
+  - q: Do you offer emergency or after-hours service?
+    a: That depends on the company's hours and on-call setup. Tell me what's happening — if it's urgent, I'll make sure it's flagged as an emergency and handled accordingly.
+
+sources:
+  - url: https://www.fairfaxcounty.gov/emergency/quail-pond-court-area-incident
+    used_for: Gas leak emergency script (evacuate, no electrical switches, call 911 and gas utility from outside, don't re-enter).
+  - url: https://www.theenvironmentalblog.org/2025/04/28/what-does-a-gas-leak-smell-like/
+    used_for: Cross-check of CPSC/NFPA-aligned gas leak steps and trigger signs (rotten egg smell, hissing).
+  - url: https://www.ferrellgas.com/tank-talk/blog-articles/what-makes-propane-heavier-than-air/
+    used_for: Propane-specific gas leak response (evacuate, call 911 and supplier, stay out until cleared).
+  - url: https://www.rotorooter.com/blog/plumbing/what-to-do-in-plumbing-emergencies/
+    used_for: Burst pipe / active flooding script (main shutoff first, then electricity, open faucets).
+  - url: https://atyourservice.seattle.gov/2022/11/03/preparing-for-seattle-winter-weather/
+    used_for: Burst pipe response and main shutoff location guidance from a municipal water utility.
+  - url: https://www.gwsavage.com/2026/01/20/what-to-do-when-a-pipe-bursts/
+    used_for: Burst pipe step ordering (shut water first) and clock-wise valve direction.
+  - url: https://www.cdc.gov/floods/safety/guidelines-for-septic-and-onsite-wastewater-systems.html
+    used_for: Sewage-contaminated water health warning (avoid contact; it can make you sick).
+  - url: https://disasterspecialists.com/sewage-backup-cleanup-a-guide-to-keeping-your-family-safe/
+    used_for: Sewage backup script (stop using all plumbing, keep out of area, power caution).
+  - url: https://www.toronto.ca/services-payments/water-environment/your-water-pipes-meter/water-related-help-advice/prevent-or-thaw-frozen-pipes/
+    used_for: Frozen pipe safety (never open flame; shutoff awareness; which pipes freeze).
+  - url: https://planetdetroit.org/2026/01/21/preventing-frozen-pipes-tips/
+    used_for: Red Cross warning against open flames/torches for frozen pipes.
+  - url: https://www.homeadvisor.com/cost/plumbing/repair-a-clogged-drain/
+    used_for: Drain cleaning price ranges, main-line clearing costs, sewer repair cost ranges, camera inspection context, chemical drain cleaner caution.
+  - url: https://fieldcamp.ai/blog/plumbing-industry-trends-statistics/
+    used_for: Price range table (faucet, toilet, water heater, sewer line, repipe, slab leak, gas line).
+  - url: https://aiclientbuilder.com/results/home-service-job-values
+    used_for: Angi/HomeAdvisor 2024 national median ranges (drain cleaning, toilet, tank/tankless water heater).
+  - url: https://www.angi.com/articles/how-much-does-sump-pump-replacement-cost.htm
+    used_for: Sump pump replacement range.
+  - url: https://www.thepricer.org/how-much-does-a-sump-pump-replacement-cost/
+    used_for: Battery backup sump pump system installed cost.
+  - url: https://www.homewyse.com/services/cost_to_replace_hot_water_heater.html
+    used_for: Cross-check of water heater replacement cost.
+  - url: https://ainora.lt/blog/hvac-service-call-statistics-2026
+    used_for: Plumber service-call / diagnostic fee ranges (Angi/HomeAdvisor cited).
+  - url: https://nuflow.com/blog/sewer-line-repair-cost-estimates-for-residential-homes/
+    used_for: Sewer line repair/replacement project range.
+  - url: https://ai.callmilestone.com/blogs/Dallas-TX-Pipe-Repair-Costs-2024-%E2%80%94-Plumbing-Guide
+    used_for: Slab leak detection and water service line replacement ranges.
+  - url: https://homeguide.com/costs/shower-valve-replacement-cost
+    used_for: Shower valve replacement range.
+  - url: https://www.tnstandard.com/backflow-preventer-testing-costs/
+    used_for: Backflow preventer testing cost.
+  - url: https://www.coveryourbrass.com/post/backflow-preventer-installation-cost
+    used_for: Backflow preventer installation average.
+  - url: https://www.cloverdaleplumbing.com/faqs/
+    used_for: Water softener installed cost (single regional source — flagged as thin data in the pack).
+  - url: https://www.rheem.com/water-heating/articles/water-heater-lifespan-when-to-repair-vs-replace/
+    used_for: Water heater lifespans (tank 8-12 years, tankless 15-20+) used in FAQ and repair-vs-replace notes.
+  - url: https://www.hotwater.com/info-center/how-long-do-water-heaters-last.html
+    used_for: Cross-check of water heater lifespan figures (A. O. Smith).
+  - url: https://www.housecallpro.com/plumbing/templates-calculators/plumbing-dispatcher-script-template/
+    used_for: Dispatcher intake question patterns (per-fixture questions, urgency triage, access details) that shaped qualification_questions.
+  - url: https://vocalyai.com/blog/emergency-plumbing-call-triage-prioritize-burst-pipes-water-heaters
+    used_for: Emergency vs. urgent vs. routine triage framework (active flow, whole-home water loss, sewage, gas, electrical risk) behind urgency levels and emergency triggers.

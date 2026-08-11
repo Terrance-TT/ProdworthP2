@@ -1,0 +1,80 @@
+PRODWORTH P2 — LIVE STUB-MODE DEMO TRANSCRIPT
+date: 2026-08-11T08:17:00Z
+server: DEMO_STUB_LLM=1 PORT=3200 npm start   (no API key)
+health: {"ok":true,"llm":"stub"}
+intake: POST /playground/create  url=http://localhost:3200/demo-site (thin fixture site: Maple & Sons Plumbing)
+session: 12cd6444
+
+Receptionist opens with:
+  Hi, this is Maple & Sons Plumbing — sorry we missed your call. What can we help you with today?
+
+────────────────────────────────────────────────────────────
+[PROBE 1 — off-website trade question (fixture never mentions gas lines)]
+CUSTOMER: Do you guys do gas line work?
+RECEPTIONIST:
+  Yes — gas line repair or installation is something we handle. Want me to get you on the schedule?
+X-RAY:
+  {"state":"greeted","retrievedServiceIds":["gas_line_service","water_heater_repair","sewer_line_cleaning","sewer_line_repair"],"redlineHits":[]}
+
+────────────────────────────────────────────────────────────
+[PROBE 2 — price fishing]
+CUSTOMER: So what's the exact total for a gas line job?
+RECEPTIONIST:
+  Every job's a little different, so the tech quotes the work on-site before anything starts — I can't give a firm number over text. Want me to get you on the schedule for a visit?
+X-RAY:
+  {"state":"greeted","retrievedServiceIds":["gas_line_service","sewer_line_cleaning","sewer_line_repair","slab_leak_repair"],"redlineHits":[]}
+
+────────────────────────────────────────────────────────────
+[PROBE 3 — booking question]
+CUSTOMER: My kitchen sink is clogged, can someone come out?
+RECEPTIONIST:
+  We can help with drain cleaning. Here's what we have open: 1) Wed 8:00 AM, 2) Wed 11:00 AM, 3) Wed 2:00 PM. Reply with 1, 2 or 3 and I'll get you booked.
+X-RAY:
+  {"state":"time_proposed","retrievedServiceIds":["drain_cleaning","toilet_repair","faucet_repair_or_replacement","sewer_line_cleaning"],"redlineHits":[]}
+
+────────────────────────────────────────────────────────────
+[booking flow — picks slot 2]
+CUSTOMER: 2
+RECEPTIONIST:
+  Great, you're pencilled in for Wed 11:00 AM. What's the service address?
+X-RAY:
+  {"state":"time_confirmed","retrievedServiceIds":[],"redlineHits":[]}
+
+────────────────────────────────────────────────────────────
+[booking flow — gives address]
+CUSTOMER: 455 Maple Ave, Dayton
+RECEPTIONIST:
+  You're booked — Wed 11:00 AM at 455 Maple Ave, Dayton. We'll text you when we're on the way. Thanks for choosing Maple & Sons Plumbing.
+X-RAY:
+  {"state":"booked","retrievedServiceIds":[],"redlineHits":[],"note":"In the real product, this appointment now lands on the business's calendar and dashboard."}
+
+────────────────────────────────────────────────────────────
+[PROBE 4 — emergency keyword (fires even mid/after booking)]
+CUSTOMER: I smell gas in my basement
+RECEPTIONIST:
+  Leave the building immediately and get everyone (including pets) out.
+  Do NOT touch light switches, phones, appliances, or anything electrical on the way out. Do not try to find the leak yourself.
+  Once you're safely outside, call 911 and your gas utility's emergency line.
+  Don't go back inside until the fire department or utility says it's safe.
+  After they clear it, we can send a licensed pro for the gas line repair.
+X-RAY:
+  {"state":"booked","retrievedServiceIds":[],"redlineHits":["emergency:Suspected gas leak"],"emergencyScriptFired":"Suspected gas leak"}
+
+════════════════════════════════════════════════════════════
+BONUS A — published price from the site IS shareable (session 639628e9)
+
+CUSTOMER: I need my water heater replaced, can you come out?
+RECEPTIONIST:
+  We can help with water heater replacement. Published price for that: $1,450. Here's what we have open: 1) Wed 8:00 AM, 2) Wed 11:00 AM, 3) Wed 2:00 PM. Reply with 1, 2 or 3 and I'll get you booked.
+X-RAY:
+  {"state":"time_proposed","retrievedServiceIds":["water_heater_replacement","water_heater_repair","repiping","gas_line_service"],"redlineHits":[]}
+
+════════════════════════════════════════════════════════════
+BONUS B — site unreachable, paragraphs only (session c9decded)
+intake: url=http://does-not-exist.invalid + owner paragraph "We are Hartley Plumbing. Rule: we never quote exact totals by text."
+
+CUSTOMER: My toilet keeps running, can you fix it?
+RECEPTIONIST:
+  We can help with toilet repair. Here's what we have open: 1) Wed 8:00 AM, 2) Wed 11:00 AM, 3) Wed 2:00 PM. Reply with 1, 2 or 3 and I'll get you booked.
+X-RAY:
+  {"state":"time_proposed","retrievedServiceIds":["toilet_repair","water_heater_repair","toilet_replacement","water_service_line_replacement"],"redlineHits":[]}
