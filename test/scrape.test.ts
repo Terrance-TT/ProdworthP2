@@ -3,6 +3,7 @@ import {
   scrapeSite,
   stripHtml,
   isPrivateHost,
+  extractEmbeddedJsonText,
 } from "../src/intake/scrape.js";
 
 const HEADERS = { "content-type": "text/html" };
@@ -175,5 +176,39 @@ describe("scrapeSite http fallback and failure reasons", () => {
   it("reports invalid_url and blocked_host reasons", async () => {
     expect((await scrapeSite("http://")).failureReason).toBe("invalid_url");
     expect((await scrapeSite("http://192.168.1.1")).failureReason).toBe("blocked_host");
+  });
+});
+
+describe("embedded JSON extraction (JS-rendered sites)", () => {
+  const SPA_HTML = `<!doctype html><html><head>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"Plumber","name":"Ace Plumbing Co","description":"Family-owned plumber serving Dayton since 1987. Drain cleaning, water heaters, and repiping."}</script>
+    </head><body><div id="root"></div>
+    <script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"headline":"Fast, honest plumbing repairs across the Miami Valley","cta":"https://ace.example/book","css":"https://cdn.example.com/main.css","services":["Emergency drain clearing available seven days a week","Water heater install and repair"]}},"buildId":"a1b2c3d4e5f6071829"}</script>
+    </body></html>`;
+
+  it("pulls readable content out of ld+json and __NEXT_DATA__", () => {
+    const text = extractEmbeddedJsonText(SPA_HTML);
+    expect(text).toContain("Family-owned plumber serving Dayton since 1987");
+    expect(text).toContain("Fast, honest plumbing repairs across the Miami Valley");
+    expect(text).toContain("Emergency drain clearing available seven days a week");
+    // Junk strings are filtered out.
+    expect(text).not.toContain("https://ace.example/book");
+    expect(text).not.toContain("main.css");
+    expect(text).not.toContain("a1b2c3d4e5f6071829");
+  });
+
+  it("scraped page text includes JSON content even when markup is an empty shell", async () => {
+    const res = new Response(SPA_HTML, { status: 200, headers: HEADERS });
+    const site = await scrapeSite("http://spa.example", {
+      fetchImpl: fakeFetch(res),
+    });
+    expect(site.ok).toBe(true);
+    expect(site.text).toContain("Ace Plumbing Co");
+  });
+
+  it("ignores malformed JSON blobs", () => {
+    const html = `<script type="application/ld+json">{not json</script><script id="__NEXT_DATA__">{"props":{"pageProps":{"tagline":"We fix leaks right the first time, guaranteed or not"}}}</script>`;
+    const text = extractEmbeddedJsonText(html);
+    expect(text).toContain("We fix leaks right the first time");
   });
 });

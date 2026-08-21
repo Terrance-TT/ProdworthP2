@@ -3,8 +3,10 @@
  * plain text, and optionally crawl up to 2 same-origin links that look like
  * services/about/contact pages. Deliberately minimal — no headless browser,
  * no HTML parser dependency; careful regex stripping is enough for the
- * brochure sites this demo targets. Any failure degrades to empty text so
- * intake can proceed with the owner's paragraphs alone.
+ * brochure sites this demo targets. JS-rendered sites ship their content in
+ * embedded JSON (ld+json, __NEXT_DATA__), which we parse without executing
+ * any JavaScript. Any failure degrades to empty text so intake can proceed
+ * with the owner's paragraphs alone.
  */
 
 export interface ScrapedSite {
@@ -126,7 +128,7 @@ export async function scrapeSite(
   if (!main) return empty("fetch_failed");
   pagesFetched++;
   finalUrl = main.finalUrl;
-  text += safeStrip(main.html);
+  text += pageText(main.html);
 
   // Crawl up to 2 same-origin links that look like services/about/contact.
   if (text.length < MAX_TEXT_CHARS) {
@@ -149,7 +151,7 @@ export async function scrapeSite(
       const page = await fetchPage(link.toString(), fetchOpts);
       if (!page) continue;
       pagesFetched++;
-      text += "\n\n" + safeStrip(page.html);
+      text += "\n\n" + pageText(page.html);
     }
   }
 
@@ -248,6 +250,61 @@ function safeStrip(html: string): string {
     return stripHtml(html);
   } catch {
     return "";
+  }
+}
+
+/** Text from one HTML page: content recovered from embedded JSON first
+    (JS-rendered sites ship their content as data), then stripped markup. */
+function pageText(html: string): string {
+  const json = extractEmbeddedJsonText(html);
+  const stripped = safeStrip(html);
+  return json ? `${json}\n${stripped}` : stripped;
+}
+
+/**
+ * JS-rendered sites (Next.js, Wix, …) embed page content in JSON script
+ * tags — <script type="application/ld+json"> and <script id="__NEXT_DATA__">.
+ * Parse them and keep human-meaningful strings. No JavaScript is executed.
+ */
+export function extractEmbeddedJsonText(html: string): string {
+  const re =
+    /<script[^>]*(?:type="application\/ld\+json"|id="__NEXT_DATA__")[^>]*>([\s\S]*?)<\/script>/gi;
+  const strings: string[] = [];
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    try {
+      collectStrings(JSON.parse(m[1]!), strings);
+    } catch {
+      // not valid JSON — skip the blob
+    }
+  }
+  return [...new Set(strings)].join("\n");
+}
+
+function collectStrings(value: unknown, out: string[]): void {
+  if (out.length > 500) return; // bound work on pathological payloads
+  if (typeof value === "string") {
+    const s = value.trim();
+    // Keep strings a human would read; drop URLs, asset paths, ids, hex.
+    if (
+      s.length >= 15 &&
+      s.length <= 500 &&
+      s.includes(" ") &&
+      /[a-zA-Z]/.test(s) &&
+      !/^https?:\/\//.test(s) &&
+      !/[\w-]+\.(css|js|png|jpe?g|svg|webp|woff2?)(\?|$)/.test(s) &&
+      !/^[0-9a-f]{16,}$/i.test(s)
+    ) {
+      out.push(s);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const v of value) collectStrings(v, out);
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const v of Object.values(value)) collectStrings(v, out);
   }
 }
 
