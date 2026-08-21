@@ -294,7 +294,12 @@ export class PlaygroundEngine {
    * from the availability helper.
    */
   private violatesScheduling(session: Session, text: string): boolean {
-    return session.filter.violatesLlmRule(text, "no_invented_scheduling");
+    // The business's published hours legitimately contain times ("Mon–Fri
+    // 7am–6pm") — repeating pack facts verbatim is not inventing an
+    // appointment. Exempt the exact known string before checking.
+    const hours = session.pack.hours;
+    const scrubbed = hours ? text.replace(hours, "") : text;
+    return session.filter.violatesLlmRule(scrubbed, "no_invented_scheduling");
   }
 
   private resolveService(

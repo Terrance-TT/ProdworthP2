@@ -121,6 +121,36 @@ describe("engine loop with stubbed LLM", () => {
     expect(xray.emergencyScriptFired).toBe("Suspected gas leak");
   });
 
+  it("books a generic scheduling request that names no service", async () => {
+    const session = makeSession();
+    // Misspelled and service-free — retrieval finds nothing; the stub must
+    // still read this as booking intent.
+    const { reply } = await makeEngine().handleMessage(
+      session,
+      "can I schedule an appointmet"
+    );
+    expect(reply).toContain("Here's what we have open");
+    expect(session.state).toBe("time_proposed");
+  });
+
+  it("answers 'where are you based?' from the extracted service area", async () => {
+    const session = makeSession();
+    const { reply } = await makeEngine().handleMessage(
+      session,
+      "where are you based?"
+    );
+    expect(reply).toContain("Dayton, Kettering");
+  });
+
+  it("answers 'when are you open?' from the extracted hours", async () => {
+    const session = makeSession();
+    const { reply } = await makeEngine().handleMessage(
+      session,
+      "when are you guys open?"
+    );
+    expect(reply).toContain("Mon–Fri 7am–6pm");
+  });
+
   it("does not fire emergency scripts on routine look-alike phrases", async () => {
     const engine = makeEngine();
     for (const text of [

@@ -112,7 +112,7 @@ export function retrieveSlice(
   // Area phrasing only — "cover" alone also matches insurance-coverage
   // questions ("does insurance cover this?"), which are NOT area questions.
   const mentionsArea =
-    /area|town|city|come to|service (in|to)|do you (go|travel|cover|serve)|cover (my|your|the) (area|zip|town|city|county|neighbou?rhood)/.test(
+    /area|town|city|come to|service (in|to)|do you (go|travel|cover|serve)|cover (my|your|the) (area|zip|town|city|county|neighbou?rhood)|\b(based|located|headquartered)\b|where('re| are) (you|we)/.test(
       q
     ) ||
     (pack.serviceArea !== undefined &&

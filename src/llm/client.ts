@@ -145,6 +145,42 @@ function stubCompletion(prompt: string): unknown {
         };
       }
 
+      // Area / hours questions: answer from the slice when retrieval surfaced
+      // the business's facts (formatSlice embeds them as labeled lines).
+      const areaLine = /^Service area: (.+)\.$/m.exec(prompt)?.[1];
+      if (areaLine && /where|based|located|area|cover|serve|come to|travel/.test(lower)) {
+        return {
+          intent: "question_answerable",
+          service: null,
+          question: inbound,
+          draft_reply: `We serve ${areaLine}. Can I get you on the schedule?`,
+        };
+      }
+      const hoursLine = /^Hours: (.+)\.$/m.exec(prompt)?.[1];
+      if (hoursLine && /hour|open|close|weekend|when/.test(lower)) {
+        return {
+          intent: "question_answerable",
+          service: null,
+          question: inbound,
+          draft_reply: `Our hours are ${hoursLine}. Want me to get you booked?`,
+        };
+      }
+
+      // Generic booking intent with no service named ("can I schedule an
+      // appointment") — book it; the engine resolves the fallback service.
+      if (
+        /schedul|appoint|book|come (out|over)|someone (out|over)|send (someone|a tech|a plumber)/.test(
+          lower
+        )
+      ) {
+        return {
+          intent: "book_job",
+          service: services.length > 0 ? services[0]!.name : null,
+          question: null,
+          draft_reply: "",
+        };
+      }
+
       // A question squarely about the business's services.
       if (/^(do|can|are) (you|we)\b/.test(lower) && services.length > 0) {
         const s = services[0]!;
