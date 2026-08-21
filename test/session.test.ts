@@ -3,6 +3,7 @@ import { SessionStore, type Session } from "../src/playground/session.js";
 
 const init = {
   sourceUrl: "http://example.com",
+  scrape: { ok: true, pagesFetched: 1, charsRead: 500 },
   pack: {} as Session["pack"],
   overlay: {} as Session["overlay"],
   filter: {} as Session["filter"],

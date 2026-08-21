@@ -109,7 +109,72 @@ const CHAT_CSS = `
   .composer button { padding:11px 18px; border:0; border-radius:20px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
   .composer button:disabled { opacity:.5; cursor:default; }
   .topline { max-width:430px; margin:0 auto; padding-top:8px; }
+  .intake { max-width:430px; margin:14px auto 0; font-size:13px; line-height:1.5; }
+  .intake .ok { color:var(--accent); }
+  .intake .warn {
+    background:#fdf6e5; border:1px solid #ecd9a8; color:#7a5b13;
+    padding:10px 12px; border-radius:9px;
+  }
+  .intake details { margin-top:6px; color:var(--muted); }
+  .intake details summary { cursor:pointer; }
+  .intake details ul { margin:6px 0 0; padding-left:18px; }
 `;
+
+/** One honest sentence about how website intake went — a failed scrape is
+    shown, never silent. */
+function intakeNote(session: Session): string {
+  const s = session.scrape;
+  let host = session.sourceUrl;
+  try {
+    host = new URL(
+      /^https?:\/\//i.test(session.sourceUrl)
+        ? session.sourceUrl
+        : `https://${session.sourceUrl}`
+    ).hostname;
+  } catch {
+    // keep the raw input
+  }
+  if (!s.ok) {
+    const why =
+      s.failureReason === "invalid_url"
+        ? "that address doesn't look like a valid URL"
+        : s.failureReason === "blocked_host"
+          ? "that address points at a private or internal network"
+          : "it didn't respond with a readable web page (down, blocked us, or not HTML)";
+    return `<div class="warn">Couldn't read <b>${escapeHtml(host)}</b> — ${why}. The receptionist is running on the owner's notes only.</div>`;
+  }
+  if (s.charsRead < 200) {
+    return `<div class="warn">Read ${s.pagesFetched} page(s) from <b>${escapeHtml(host)}</b> but found almost no readable text — the site may rely on JavaScript. The receptionist is mostly running on the owner's notes.</div>`;
+  }
+  return `<div class="ok">Read ${s.pagesFetched} page(s) from <b>${escapeHtml(host)}</b>.</div>`;
+}
+
+/** "What we extracted" panel — the facts the overlay actually captured. */
+function extractionPanel(session: Session): string {
+  const { overlay, pack } = session;
+  const items: string[] = [];
+  items.push(`Business name: ${escapeHtml(pack.businessName)}`);
+  if (pack.serviceArea) items.push(`Service area: ${escapeHtml(pack.serviceArea)}`);
+  if (pack.hours) items.push(`Hours: ${escapeHtml(pack.hours)}`);
+  const mentioned = overlay.servicesMentioned.length;
+  if (mentioned > 0) {
+    items.push(
+      `Services spotted: ${mentioned} matched to the trade pack${pack.customServices.length > 0 ? `, plus ${escapeHtml(pack.customServices.join(", "))}` : ""}`
+    );
+  }
+  const prices = overlay.pricingOverrides.filter((p) => p.shareable);
+  if (prices.length > 0) {
+    items.push(
+      `Published prices: ${prices.map((p) => `${escapeHtml(p.label)} — ${escapeHtml(p.priceText)}`).join("; ")}`
+    );
+  }
+  if (overlay.extraRedlines.length > 0) {
+    items.push(`House rules: ${overlay.extraRedlines.map((r) => escapeHtml(r.rule)).join("; ")}`);
+  }
+  return `<details><summary>what we extracted from your site</summary><ul>${items
+    .map((i) => `<li>${i}</li>`)
+    .join("")}</ul></details>`;
+}
 
 export function chatPage(session: Session, greeting: string): string {
   const name = escapeHtml(session.pack.businessName);
@@ -125,6 +190,10 @@ export function chatPage(session: Session, greeting: string): string {
 <div class="wrap" style="padding-bottom:0">
   <div class="topline">
     <div class="brand">prod<span>worth</span></div>
+  </div>
+  <div class="intake">
+    ${intakeNote(session)}
+    ${extractionPanel(session)}
   </div>
   <div class="phone">
     <div class="phone-head">

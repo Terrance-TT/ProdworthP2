@@ -33,6 +33,15 @@ export interface Session {
   id: string;
   createdAt: Date;
   sourceUrl: string;
+  /** How website intake went — shown on the chat page so a failed scrape is
+      visible instead of silent. */
+  scrape: {
+    ok: boolean;
+    pagesFetched: number;
+    /** Characters of readable text extracted; ~0 on a JS-rendered site. */
+    charsRead: number;
+    failureReason?: "invalid_url" | "blocked_host" | "fetch_failed";
+  };
   pack: EffectivePack;
   overlay: BusinessOverlay;
   filter: RedlineFilter;

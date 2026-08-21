@@ -100,6 +100,12 @@ export function buildServer(env: NodeJS.ProcessEnv = process.env) {
 
     const session = sessions.create({
       sourceUrl: url,
+      scrape: {
+        ok: site.ok,
+        pagesFetched: site.pagesFetched,
+        charsRead: site.text.length,
+        ...(site.failureReason ? { failureReason: site.failureReason } : {}),
+      },
       pack,
       overlay,
       filter,

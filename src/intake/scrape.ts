@@ -13,6 +13,8 @@ export interface ScrapedSite {
   /** Combined plain text, capped at MAX_TEXT_CHARS. */
   text: string;
   pagesFetched: number;
+  /** Why the scrape failed, when ok is false. */
+  failureReason?: "invalid_url" | "blocked_host" | "fetch_failed";
 }
 
 export interface ScrapeOptions {
@@ -84,22 +86,41 @@ export async function scrapeSite(
 ): Promise<ScrapedSite> {
   const allowPrivateHosts = options.allowPrivateHosts ?? false;
   const fetchImpl = options.fetchImpl ?? fetch;
-  const empty: ScrapedSite = { ok: false, finalUrl: url, text: "", pagesFetched: 0 };
+  const empty = (failureReason: ScrapedSite["failureReason"]): ScrapedSite => ({
+    ok: false,
+    finalUrl: url,
+    text: "",
+    pagesFetched: 0,
+    ...(failureReason ? { failureReason } : {}),
+  });
   let normalized: URL;
+  // Owners paste scheme-less URLs ("joescplumbing.com"); assume https first.
+  const hadScheme = /^https?:\/\//i.test(url);
   try {
-    normalized = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+    normalized = new URL(hadScheme ? url : `https://${url}`);
   } catch {
-    return empty;
+    return empty("invalid_url");
   }
-  if (!allowPrivateHosts && isPrivateHost(normalized.hostname)) return empty;
+  if (!allowPrivateHosts && isPrivateHost(normalized.hostname)) {
+    return empty("blocked_host");
+  }
 
   let text = "";
   let pagesFetched = 0;
   let finalUrl = normalized.toString();
 
   const fetchOpts = { allowPrivateHosts, fetchImpl };
-  const main = await fetchPage(normalized.toString(), fetchOpts);
-  if (!main) return empty;
+  let main = await fetchPage(normalized.toString(), fetchOpts);
+  // Scheme-less URL + https failed → retry once over plain http (e.g. the
+  // local demo, or a small business site with no TLS).
+  if (!main && !hadScheme) {
+    const httpUrl = new URL(`http://${url}`);
+    if (allowPrivateHosts || !isPrivateHost(httpUrl.hostname)) {
+      main = await fetchPage(httpUrl.toString(), fetchOpts);
+      if (main) normalized = httpUrl;
+    }
+  }
+  if (!main) return empty("fetch_failed");
   pagesFetched++;
   finalUrl = main.finalUrl;
   text += safeStrip(main.html);

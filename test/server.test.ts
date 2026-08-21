@@ -61,6 +61,7 @@ describe("buildServer", () => {
     const filter = new RedlineFilter(buildPackRules(pack));
     const session = sessions.create({
       sourceUrl: "http://example.com",
+      scrape: { ok: true, pagesFetched: 1, charsRead: 500 },
       pack,
       overlay,
       filter,

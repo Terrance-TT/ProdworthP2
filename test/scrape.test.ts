@@ -141,3 +141,39 @@ describe("stripHtml entity decoding", () => {
     expect(out.text).toContain("Hartley Plumbing");
   });
 });
+
+describe("scrapeSite http fallback and failure reasons", () => {
+  const PAGE = new Response("<html><body>Joe's Plumbing — serving Dayton</body></html>", {
+    status: 200,
+    headers: HEADERS,
+  });
+
+  it("retries scheme-less URLs over http when https fails", async () => {
+    const fetchImpl = vi.fn((url: string) =>
+      url.startsWith("https://")
+        ? Promise.reject(new Error("ECONNREFUSED"))
+        : Promise.resolve(PAGE.clone())
+    );
+    const site = await scrapeSite("joesplumbing.example", {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(site.ok).toBe(true);
+    expect(site.finalUrl).toMatch(/^http:\/\//);
+    expect(site.text).toContain("Joe's Plumbing");
+  });
+
+  it("does NOT retry over http when the scheme was explicit", async () => {
+    const fetchImpl = vi.fn(() => Promise.reject(new Error("ECONNREFUSED")));
+    const site = await scrapeSite("https://joesplumbing.example", {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(site.ok).toBe(false);
+    expect(site.failureReason).toBe("fetch_failed");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports invalid_url and blocked_host reasons", async () => {
+    expect((await scrapeSite("http://")).failureReason).toBe("invalid_url");
+    expect((await scrapeSite("http://192.168.1.1")).failureReason).toBe("blocked_host");
+  });
+});

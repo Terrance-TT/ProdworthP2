@@ -38,6 +38,7 @@ function makeSession(): Session {
   const filter = new RedlineFilter(buildPackRules(pack));
   return new SessionStore().create({
     sourceUrl: "http://localhost:3200/demo-site",
+    scrape: { ok: true, pagesFetched: 1, charsRead: 500 },
     pack,
     overlay,
     filter,
