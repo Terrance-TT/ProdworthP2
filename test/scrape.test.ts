@@ -80,7 +80,7 @@ describe("scrapeSite SSRF guard", () => {
 describe("scrapeSite response body cap", () => {
   it("rejects when declared content-length exceeds the cap", async () => {
     const res = new Response("<html><body>hi</body></html>", {
-      headers: { ...HEADERS, "content-length": String(300 * 1024) },
+      headers: { ...HEADERS, "content-length": String(3 * 1024 * 1024) },
     });
     const out = await scrapeSite("http://example.com", {
       fetchImpl: fakeFetch(res),
@@ -92,7 +92,7 @@ describe("scrapeSite response body cap", () => {
   it("rejects when streamed bytes exceed the cap", async () => {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 40; i++) {
           controller.enqueue(new Uint8Array(64 * 1024).fill(97));
         }
         controller.close();

@@ -30,7 +30,10 @@ export interface ScrapeOptions {
 
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_TEXT_CHARS = 8_000;
-const MAX_BODY_BYTES = 256 * 1024;
+// Real brochure sites routinely ship 300KB–1MB of HTML (page builders,
+// inline SVG, tracking scripts). 2MB bounds memory without rejecting
+// ordinary pages — the 8k *text* cap still applies after stripping.
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_CRAWL_LINKS = 2;
 const INTERESTING_PATH =
   /service|about|contact|what-we-do|our-work|pricing|plumbing/i;
