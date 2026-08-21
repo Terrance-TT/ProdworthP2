@@ -83,7 +83,13 @@ export function buildServer(env: NodeJS.ProcessEnv = process.env) {
     const tradePack = tradePacks.get(trade) ?? tradePacks.get("plumbing")!;
 
     // Fetch the site; if it fails, proceed with the paragraphs alone.
-    const site = await scrapeSite(url);
+    // allowPrivateHosts is a DEMO-ONLY SSRF opt-out: the keyless local demo
+    // pastes localhost:3200/demo-site, which the scraper's private-host
+    // blocklist would otherwise refuse. Only enable it when the demo-site
+    // fixture route is exposed; never for real intake.
+    const site = await scrapeSite(url, {
+      allowPrivateHosts: config.exposeDemoSite,
+    });
     const overlay = await extractOverlay(llm, tradePack, {
       siteText: site.text,
       ownerText: paragraphs,
@@ -111,10 +117,17 @@ export function buildServer(env: NodeJS.ProcessEnv = process.env) {
         .type("text/html")
         .send(landingPage("That preview session expired — start a new one."));
     }
-    return reply
-      .type("text/html")
-      .send(chatPage(session, engine.greeting(session.pack)));
+    // The greeting embeds the scraped business name, so it goes through the
+    // redline filter like every other outbound message before rendering.
+    const greeting = session.filter.check(
+      engine.greeting(session.pack)
+    ).safeBody;
+    return reply.type("text/html").send(chatPage(session, greeting));
   });
+
+  // Per-session promise chain: concurrent texts to one session must never
+  // interleave — machine.transition throws on an illegal state jump (500).
+  const sessionChains = new Map<string, Promise<void>>();
 
   app.post("/playground/:id/message", async (req, reply) => {
     const { id } = req.params as { id: string };
@@ -126,10 +139,21 @@ export function buildServer(env: NodeJS.ProcessEnv = process.env) {
     if (!parsed.success) {
       return reply.status(400).send({ error: "expected {text}" });
     }
-    const { reply: text, xray } = await engine.handleMessage(
-      session,
-      parsed.data.text
+    const prev = sessionChains.get(session.id) ?? Promise.resolve();
+    const next = prev.then(() =>
+      engine.handleMessage(session, parsed.data.text)
     );
+    const tracked = next.then(
+      () => undefined,
+      () => undefined
+    );
+    sessionChains.set(session.id, tracked);
+    void tracked.finally(() => {
+      if (sessionChains.get(session.id) === tracked) {
+        sessionChains.delete(session.id);
+      }
+    });
+    const { reply: text, xray } = await next;
     return { reply: text, xray };
   });
 

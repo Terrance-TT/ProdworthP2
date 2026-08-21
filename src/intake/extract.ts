@@ -125,12 +125,17 @@ export function heuristicOverlay(
   }
   if (!businessName) {
     try {
-      const host = new URL(input.url).hostname.replace(/^www\./, "");
+      // Prepend https:// like scrapeSite does — a bare "host:port/path"
+      // otherwise parses with an empty hostname ("localhost:" as scheme).
+      const host = new URL(
+        /^https?:\/\//i.test(input.url) ? input.url : `https://${input.url}`
+      ).hostname.replace(/^www\./, "");
       businessName =
         host.split(".")[0]!.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     } catch {
-      businessName = "Your Business";
+      // fall through to the default below
     }
+    if (!businessName) businessName = "Your Business";
   }
 
   // Services mentioned, mapped to trade ids via name/synonym hits.
@@ -211,10 +216,14 @@ export function heuristicOverlay(
     }
   }
 
-  // Owner-stated rules: lines beginning "Rule:" become extra redlines.
+  // Owner-stated rules: "Rule:" at a line start OR after a sentence boundary
+  // becomes an extra redline — the landing-page placeholder and the demo both
+  // use the mid-line form ("…east side. Rule: we never give firm quotes…").
+  // \brule\b keeps substrings like "ruled:" from matching.
+  const RULE_RE = /(?:^|[.!?]\s+)rule\b\s*:\s*(.+)$/i;
   const extraRedlines: BusinessOverlay["extraRedlines"] = [];
   for (const line of ownerText.split("\n")) {
-    const ruleMatch = /^\s*rule\s*:\s*(.+)$/i.exec(line);
+    const ruleMatch = RULE_RE.exec(line);
     if (ruleMatch) {
       const rule = ruleMatch[1]!.trim();
       extraRedlines.push({

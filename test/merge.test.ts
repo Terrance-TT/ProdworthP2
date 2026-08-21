@@ -57,8 +57,34 @@ describe("mergePacks", () => {
     expect(svc.pricing.shareableText).toBe("$1,450");
   });
 
-  it("trade-pack pricing stays non-shareable without an overlay override", () => {
+  it("evidenced non-shareable override replaces internal guidance but stays non-shareable", () => {
     const pack = mergePacks(
+      trade,
+      makeOverlay({
+        pricingOverrides: [
+          {
+            tradeServiceId: "drain_cleaning",
+            label: "Drain cleaning",
+            priceText: "$150",
+            shareable: false,
+            evidence: {
+              source: "owner_text",
+              quote: "Drain cleaning is $150 flat, but don't quote it.",
+            },
+          },
+        ],
+      })
+    );
+    const svc = pack.services.find((s) => s.id === "drain_cleaning")!;
+    expect(svc.pricing.shareable).toBe(false);
+    expect(svc.pricing.shareableText).toBeUndefined();
+    // The override's evidence replaced the trade guidance, not merged with it.
+    expect(svc.pricing.internalNote).toContain("$150");
+    expect(svc.pricing.internalNote).toContain("owner_text");
+    expect(svc.pricing.internalNote).not.toContain("Internal market range");
+  });
+
+  it("trade-pack pricing stays non-shareable without an overlay override", () => {    const pack = mergePacks(
       trade,
       makeOverlay({
         pricingOverrides: [
@@ -124,5 +150,43 @@ describe("mergePacks", () => {
     expect(pack.customServices).toEqual(["Pool leak repair"]);
     expect(pack.services.find((s) => s.id === "drain_cleaning")!.mentionedByBusiness).toBe(true);
     expect(pack.services.find((s) => s.id === "toilet_repair")!.mentionedByBusiness).toBe(false);
+  });
+
+  it("general-fee and unknown-id pricing overrides land in generalPricing, never vanish", () => {
+    const pack = mergePacks(
+      trade,
+      makeOverlay({
+        pricingOverrides: [
+          {
+            tradeServiceId: null,
+            label: "Service call",
+            priceText: "$89",
+            shareable: true,
+            evidence: { source: "website", quote: "Service calls just $89." },
+          },
+          {
+            tradeServiceId: "not_a_real_service",
+            label: "Mystery fee",
+            priceText: "$50",
+            shareable: false,
+            evidence: { source: "owner_text", quote: "We charge $50 for that." },
+          },
+        ],
+      })
+    );
+    expect(pack.generalPricing).toEqual([
+      {
+        label: "Service call",
+        priceText: "$89",
+        shareable: true,
+        evidenceQuote: "Service calls just $89.",
+      },
+      {
+        label: "Mystery fee",
+        priceText: "$50",
+        shareable: false,
+        evidenceQuote: "We charge $50 for that.",
+      },
+    ]);
   });
 });

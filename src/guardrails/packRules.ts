@@ -11,9 +11,14 @@ import { escapeRegExp, type RedlineRule } from "./redlines.js";
 /** Dollar figures found in the pack's shareable, published prices. */
 function shareableFigures(pack: EffectivePack): string[] {
   const figures: string[] = [];
-  for (const s of pack.services) {
-    if (!s.pricing.shareable || !s.pricing.shareableText) continue;
-    for (const m of s.pricing.shareableText.matchAll(/\$\s*(\d[\d,]*(?:\.\d{2})?)/g)) {
+  const texts = [
+    ...pack.services
+      .filter((s) => s.pricing.shareable && s.pricing.shareableText)
+      .map((s) => s.pricing.shareableText!),
+    ...pack.generalPricing.filter((g) => g.shareable).map((g) => g.priceText),
+  ];
+  for (const text of texts) {
+    for (const m of text.matchAll(/\$\s*(\d[\d,]*(?:\.\d{2})?)/g)) {
       figures.push(m[1]!);
     }
   }
@@ -31,14 +36,18 @@ export function buildPackRules(pack: EffectivePack): RedlineRule[] {
   // figure may only ever be repeated verbatim by deterministic templates.)
   if (has("no_exact_quotes")) {
     const allowed = shareableFigures(pack).map(escapeRegExp);
-    const pricePattern =
-      allowed.length > 0
-        ? `\\$(?!(?:${allowed.join("|")})(?!\\d))\\s?\\d[\\d,]*(\\.\\d{2})?`
-        : `\\$\\s?\\d[\\d,]*(\\.\\d{2})?`;
+    // An allowed figure only stays allowed when it stands alone — "$89.99"
+    // or "$890" must not slip through on the back of a published "$89"
+    // (a sentence-final period like "$89." is fine; a decimal digit isn't).
+    const allowedLookahead =
+      allowed.length > 0 ? `(?!(?:${allowed.join("|")})(?!\\d|\\.\\d))` : "";
     rules.push({
       id: "no_exact_quotes",
       description: desc("no_exact_quotes"),
-      patterns: [pricePattern],
+      patterns: [
+        `\\$\\s*${allowedLookahead}\\d[\\d,]*(\\.\\d{2})?`,
+        `(?i)\\b${allowedLookahead}\\d[\\d,]*(\\.\\d{2})?\\s?(dollars|usd)\\b`,
+      ],
     });
   }
 
@@ -47,8 +56,8 @@ export function buildPackRules(pack: EffectivePack): RedlineRule[] {
       id: "no_guarantees_or_warranties",
       description: desc("no_guarantees_or_warranties"),
       patterns: [
-        "(?i)\\bguarantee\\b",
-        "(?i)\\bwarrant(y|ies)\\b",
+        "(?i)\\bguarantee(d|s|ing)?\\b",
+        "(?i)\\bwarrant(y|ies|ied|ying)\\b",
         "(?i)we promise",
       ],
     });
@@ -59,8 +68,8 @@ export function buildPackRules(pack: EffectivePack): RedlineRule[] {
       id: "no_diagnosis_over_text",
       description: desc("no_diagnosis_over_text"),
       patterns: [
-        "(?i)it'?s probably",
-        "(?i)sounds like (a|an|the) ",
+        "(?i)\\bit('?s| is) probably\\b",
+        "(?i)\\bsounds like\\b",
         "(?i)that means your",
         "(?i)the problem is (probably|likely)",
       ],
@@ -101,17 +110,40 @@ export function buildPackRules(pack: EffectivePack): RedlineRule[] {
     });
   }
 
-  // no_invented_scheduling is enforced by exact-match slot validation in the
-  // engine, and emergency_services_first by the trigger rules below — both
-  // deterministic, so they need no draft patterns here.
+  // no_invented_scheduling: the engine enforces this on LLM-controlled text
+  // (draft replies, extracted addresses) via violatesLlmRule() BEFORE
+  // composing the outbound message. It is llmOnly because the engine's own
+  // deterministic slot offers ("Wed 8:00 AM") legitimately contain days and
+  // times — running these patterns on the composed message would block them.
+  if (has("no_invented_scheduling")) {
+    rules.push({
+      id: "no_invented_scheduling",
+      description: desc("no_invented_scheduling"),
+      llmOnly: true,
+      patterns: [
+        "(?i)\\b(mon|tues?|wed(nes)?|thurs?|fri|sat(ur)?|sun)(day)?\\b",
+        "(?i)\\b\\d{1,2}(:\\d{2})?\\s?(am|pm)\\b",
+        "(?i)\\b\\d{1,2}(:\\d{2})?\\s?o'?clock\\b",
+        "(?i)\\b(tomorrow|tonight|this (morning|afternoon|evening))\\b",
+        "(?i)\\bright away\\b",
+        "(?i)\\b(as soon as possible|asap)\\b",
+      ],
+    });
+  }
+
+  // emergency_services_first is enforced by the trigger rules below —
+  // deterministic, so it needs no draft patterns here.
 
   // Emergency scripts: inbound keyword → the script, verbatim. This is what
   // forces "I smell gas" → the gas safety script no matter what the LLM said.
+  // Keywords match case-insensitively (per SCHEMA.md).
   for (const script of pack.emergencyScripts) {
     rules.push({
       id: `emergency:${script.name}`,
       description: `Emergency script: ${script.name}`,
-      customerTriggers: script.trigger_keywords.map(escapeRegExp),
+      customerTriggers: script.trigger_keywords.map(
+        (k) => `(?i)${escapeRegExp(k)}`
+      ),
       mandatoryReply: script.customer_instructions.trim(),
     });
   }

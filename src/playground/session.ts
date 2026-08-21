@@ -41,14 +41,37 @@ export interface Session {
   transcript: TranscriptEntry[];
 }
 
+const DEFAULT_TTL_MS = 2 * 60 * 60 * 1_000; // 2 hours
+
+export interface SessionStoreOptions {
+  /** Sessions expire after this long; eviction is lazy (on get/create). */
+  ttlMs?: number;
+  /** Test hook: id source; collisions are retried until unique. */
+  idGenerator?: () => string;
+  /** Test hook: clock. */
+  now?: () => number;
+}
+
 export class SessionStore {
   private readonly sessions = new Map<string, Session>();
+  private readonly ttlMs: number;
+  private readonly idGenerator: () => string;
+  private readonly now: () => number;
+
+  constructor(options: SessionStoreOptions = {}) {
+    this.ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
+    this.idGenerator = options.idGenerator ?? (() => randomUUID().slice(0, 8));
+    this.now = options.now ?? Date.now;
+  }
 
   create(init: Omit<Session, "id" | "createdAt" | "transcript">): Session {
+    this.evictExpired();
+    let id = this.idGenerator();
+    while (this.sessions.has(id)) id = this.idGenerator();
     const session: Session = {
       ...init,
-      id: randomUUID().slice(0, 8),
-      createdAt: new Date(),
+      id,
+      createdAt: new Date(this.now()),
       transcript: [],
     };
     this.sessions.set(session.id, session);
@@ -56,6 +79,22 @@ export class SessionStore {
   }
 
   get(id: string): Session | undefined {
-    return this.sessions.get(id);
+    const session = this.sessions.get(id);
+    if (!session) return undefined;
+    if (this.isExpired(session)) {
+      this.sessions.delete(id);
+      return undefined;
+    }
+    return session;
+  }
+
+  private isExpired(session: Session): boolean {
+    return this.now() - session.createdAt.getTime() > this.ttlMs;
+  }
+
+  private evictExpired(): void {
+    for (const [id, session] of this.sessions) {
+      if (this.isExpired(session)) this.sessions.delete(id);
+    }
   }
 }

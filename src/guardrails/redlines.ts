@@ -16,6 +16,12 @@ export interface RedlineRule {
   description: string;
   /** Patterns forbidden in ANY outbound message. */
   patterns?: string[] | undefined;
+  /** When true, patterns are enforced ONLY on LLM-controlled text (draft
+      replies, extracted addresses) via violatesLlmRule() — never on the
+      composed outbound message. Used for rules like no_invented_scheduling
+      whose patterns legitimately appear in the engine's deterministic slot
+      offers. */
+  llmOnly?: boolean | undefined;
   /** If the customer's inbound message matches one of these, the ONLY
       permitted reply is mandatoryReply. */
   customerTriggers?: string[] | undefined;
@@ -66,10 +72,15 @@ export class RedlineFilter {
     regexes: RegExp[];
     reply: string;
   }>;
+  private readonly llmOnlyRules: Array<{
+    id: string;
+    regexes: RegExp[];
+  }>;
 
   constructor(rules: RedlineRule[]) {
     this.patternRules = [];
     this.triggerRules = [];
+    this.llmOnlyRules = [];
     for (const rule of rules) {
       if (rule.customerTriggers && rule.mandatoryReply) {
         this.triggerRules.push({
@@ -79,7 +90,7 @@ export class RedlineFilter {
         });
       }
       if (rule.patterns && rule.patterns.length > 0) {
-        this.patternRules.push({
+        (rule.llmOnly ? this.llmOnlyRules : this.patternRules).push({
           id: rule.id,
           regexes: rule.patterns.map(compile),
         });
@@ -118,5 +129,17 @@ export class RedlineFilter {
     }
 
     return { allowed: true, safeBody: draft, replaced: false };
+  }
+
+  /**
+   * Checks LLM-controlled text (a draft reply, an extracted address) against
+   * one specific llmOnly rule — e.g. no_invented_scheduling, which must not
+   * run on the composed message because the engine's own deterministic slot
+   * offers legitimately contain days and times. Returns true on violation;
+   * false when the rule doesn't exist on this filter.
+   */
+  violatesLlmRule(text: string, ruleId: string): boolean {
+    const rule = this.llmOnlyRules.find((r) => r.id === ruleId);
+    return rule !== undefined && rule.regexes.some((r) => r.test(text));
   }
 }

@@ -5,7 +5,7 @@ import { loadTradePack } from "../src/packs/tradePack.js";
 import { mergePacks } from "../src/packs/merge.js";
 import { heuristicOverlay } from "../src/intake/extract.js";
 import { stripHtml } from "../src/intake/scrape.js";
-import { RedlineFilter } from "../src/guardrails/redlines.js";
+import { RedlineFilter, SAFE_FALLBACK } from "../src/guardrails/redlines.js";
 import { buildPackRules } from "../src/guardrails/packRules.js";
 import { LlmClient } from "../src/llm/client.js";
 import {
@@ -107,6 +107,32 @@ describe("engine loop with stubbed LLM", () => {
     expect(xray.emergencyScriptFired).toBe("Suspected gas leak");
   });
 
+  it("fires emergency scripts on capitalized trigger phrases", async () => {
+    const session = makeSession();
+    const { reply, xray } = await makeEngine().handleMessage(
+      session,
+      "I Smell Gas in my Basement"
+    );
+    const script = trade.emergency_scripts.find(
+      (s) => s.name === "Suspected gas leak"
+    )!;
+    expect(reply).toBe(script.customer_instructions.trim());
+    expect(xray.emergencyScriptFired).toBe("Suspected gas leak");
+  });
+
+  it("does not fire emergency scripts on routine look-alike phrases", async () => {
+    const engine = makeEngine();
+    for (const text of [
+      "I have no water pressure in the kitchen",
+      "my toilet won't stop running",
+      "I have no hot water in the shower",
+    ]) {
+      const session = makeSession();
+      const { xray } = await engine.handleMessage(session, text);
+      expect(xray.emergencyScriptFired).toBeUndefined();
+    }
+  });
+
   it("never gives an exact total when price fishing", async () => {
     const session = makeSession();
     const { reply } = await makeEngine().handleMessage(
@@ -171,6 +197,83 @@ describe("engine loop with stubbed LLM", () => {
     expect(reply).toContain("isn't available");
     expect(reply).not.toContain("Sun 3:00 AM");
     expect(session.state).toBe("time_proposed");
+  });
+
+  it("replaces an LLM draft that invents a time in its free text", async () => {
+    // The slot fields are honest here, but the draft free text lies.
+    const lyingLlm: LlmLike = {
+      isLive: true,
+      async generateStructured<T extends z.ZodTypeAny>(schema: T): Promise<z.infer<T>> {
+        return schema.parse({
+          picked_slot_label: null,
+          wants_booking: false,
+          draft_reply: "We can do Sunday at 3am if that works for you.",
+        });
+      },
+    };
+    const engine = makeEngine(lyingLlm);
+    const session = makeSession();
+    session.state = "time_proposed";
+
+    const { reply, xray } = await engine.handleMessage(
+      session,
+      "how about sunday at 3am?"
+    );
+    expect(reply).toBe(SAFE_FALLBACK);
+    expect(reply).not.toContain("Sunday");
+    expect(xray.redlineHits).toContain("no_invented_scheduling");
+    expect(session.state).toBe("time_proposed");
+  });
+
+  it("replaces an answerable-question draft that invents times", async () => {
+    const lyingLlm: LlmLike = {
+      isLive: true,
+      async generateStructured<T extends z.ZodTypeAny>(schema: T): Promise<z.infer<T>> {
+        return schema.parse({
+          intent: "question_answerable",
+          service: null,
+          question: "what are your hours?",
+          draft_reply: "We're open Sunday at 3am — come by then.",
+        });
+      },
+    };
+    const engine = makeEngine(lyingLlm);
+    const session = makeSession();
+
+    const { reply, xray } = await engine.handleMessage(
+      session,
+      "what are your hours?"
+    );
+    expect(reply).toBe(SAFE_FALLBACK);
+    expect(reply).not.toContain("Sunday");
+    expect(xray.redlineHits).toContain("no_invented_scheduling");
+    expect(session.state).toBe("greeted");
+  });
+
+  it("re-asks when the extracted address smuggles an invented time", async () => {
+    const lyingLlm: LlmLike = {
+      isLive: true,
+      async generateStructured<T extends z.ZodTypeAny>(schema: T): Promise<z.infer<T>> {
+        return schema.parse({
+          address: "455 Maple Ave — I'll be there Tuesday 9am",
+          draft_reply: "see you then",
+        });
+      },
+    };
+    const engine = makeEngine(lyingLlm);
+    const session = makeSession();
+    session.state = "time_confirmed";
+    session.pickedSlot = {
+      label: "Wed 8:00 AM",
+      start: new Date("2026-08-12T08:00:00"),
+    };
+
+    const { reply, xray } = await engine.handleMessage(session, "455 Maple Ave");
+    expect(reply).toContain("address");
+    expect(reply).not.toContain("Tuesday");
+    expect(reply).not.toContain("You're booked");
+    expect(xray.redlineHits).toContain("no_invented_scheduling");
+    expect(session.state).toBe("time_confirmed");
   });
 
   it("falls back to a deterministic owner handoff when the LLM fails", async () => {

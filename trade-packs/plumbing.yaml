@@ -611,7 +611,9 @@ emergency_scripts:
 
   - name: No water in the whole home
     trigger_keywords:
-      - no water
+      - no water at all
+      - no water anywhere
+      - no water in the house
       - no water in house
       - water completely off
       - nothing comes out of faucets
@@ -639,7 +641,7 @@ emergency_scripts:
     trigger_keywords:
       - water heater leaking
       - water heater burst
-      - tank leaking
+      - hot water tank leaking
       - puddle around water heater
       - water heater flooding
     customer_instructions: |
@@ -653,8 +655,9 @@ emergency_scripts:
     trigger_keywords:
       - toilet overflowing
       - toilet overflow
-      - toilet won't stop
+      - toilet is overflowing
       - toilet flooding
+      - water coming out of the toilet
     customer_instructions: |
       Don't flush again.
       Turn off the small valve on the wall behind the toilet (turn clockwise) to stop the water.
@@ -679,7 +682,7 @@ terminology_map:
     might_mean: [faucet_repair_or_replacement]
     clarify_with: "That's the outdoor faucet — also called a hose bib. Is it dripping, or did it crack over the winter?"
 
-  - customer_says: "sump pump (when they actually mean a pump under a basement bathroom)"
+  - customer_says: "sump pump"
     might_mean: [sump_pump_service]
     clarify_with: "Is this a pump in a pit that handles groundwater, or one that pumps wastewater up from a basement bathroom? The second is a sewage ejector pump — different equipment, so I want to note it correctly."
 
@@ -699,7 +702,11 @@ terminology_map:
     might_mean: [drain_cleaning, sewer_line_cleaning]
     clarify_with: "Is the smell at one drain, or throughout the house? And are any drains backing up along with it?"
 
-  - customer_says: "water filter / water treatment"
+  - customer_says: "water filter"
+    might_mean: [water_softener_service]
+    clarify_with: "Are you looking at a softener for hard water, or a filtration system for taste and drinking water? We handle one or both depending on the system."
+
+  - customer_says: "water treatment"
     might_mean: [water_softener_service]
     clarify_with: "Are you looking at a softener for hard water, or a filtration system for taste and drinking water? We handle one or both depending on the system."
 

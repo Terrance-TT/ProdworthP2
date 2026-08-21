@@ -11,7 +11,7 @@ import type { BusinessOverlay } from "./overlay.js";
  *
  * Layering rules (see trade-packs/SCHEMA.md):
  * - Overlay wins on business facts (name, area, hours) and on pricing where
- *   it supplies an evidenced, published price for a service.
+ *   it supplies an evidenced price for a service — shareable or not.
  * - Trade-pack price ranges stay non-shareable no matter what; a service's
  *   price only becomes shareable via an overlay pricing override with a
  *   shareable flag (which the overlay schema only allows with an evidence
@@ -40,6 +40,17 @@ export interface EffectiveService {
   mentionedByBusiness: boolean;
 }
 
+export interface GeneralPrice {
+  /** What the price is for, in plain words ("service call"). */
+  label: string;
+  /** The price as published, e.g. "$89". */
+  priceText: string;
+  /** Quotable only when true (evidenced published price). */
+  shareable: boolean;
+  /** The exact snippet the price was extracted from. */
+  evidenceQuote: string;
+}
+
 export interface EffectivePack {
   trade: string;
   businessName: string;
@@ -49,6 +60,9 @@ export interface EffectivePack {
   toneNotes?: string;
   emergencyContactNote?: string;
   services: EffectiveService[];
+  /** Prices not tied to a trade-pack service (general fees, or overrides
+      referencing an unknown service id). Never silently dropped. */
+  generalPricing: GeneralPrice[];
   /** Custom services the business offers that don't map to the trade pack. */
   customServices: string[];
   emergencyScripts: EmergencyScript[];
@@ -68,17 +82,25 @@ export function mergePacks(
   );
 
   const services: EffectiveService[] = trade.services.map((s) => {
-    // Overlay pricing wins ONLY when it is an evidenced, shareable override
-    // for this specific service. Otherwise the trade guidance stays internal.
+    // An evidenced overlay pricing override wins for this specific service
+    // regardless of shareable (SCHEMA.md: "Overlay pricing replaces
+    // pricing_guidance"). Shareable → the published price becomes quotable.
+    // Non-shareable → it still replaces the trade guidance as an
+    // internal-only note; it must not vanish, and must never be quoted.
     const override = overlay.pricingOverrides.find(
-      (p) => p.tradeServiceId === s.id && p.shareable
+      (p) => p.tradeServiceId === s.id
     );
     const pricing: EffectivePricing = override
-      ? {
-          shareable: true,
-          shareableText: override.priceText,
-          internalNote: `Published by the business: "${override.evidence.quote}" (${override.evidence.source}). ${s.pricing_guidance.note}`,
-        }
+      ? override.shareable
+        ? {
+            shareable: true,
+            shareableText: override.priceText,
+            internalNote: `Published by the business: "${override.evidence.quote}" (${override.evidence.source}). ${s.pricing_guidance.note}`,
+          }
+        : {
+            shareable: false,
+            internalNote: `Business-provided price (never share): ${override.priceText}. Evidence: "${override.evidence.quote}" (${override.evidence.source}).`,
+          }
       : {
           shareable: false,
           internalNote: `${s.pricing_guidance.range_usd ? `Internal market range (never share): ${s.pricing_guidance.range_usd}. ` : ""}${s.pricing_guidance.note}`,
@@ -101,6 +123,19 @@ export function mergePacks(
     .filter((m) => m.tradeServiceId === null || !tradeIds.has(m.tradeServiceId))
     .map((m) => m.text);
 
+  // General fees: pricing overrides with no (or an unknown) trade service id.
+  // They don't map to a service, but they must not vanish — shareable ones
+  // (e.g. a published "$89 service call") are quotable, the rest are
+  // internal-only context.
+  const generalPricing: GeneralPrice[] = overlay.pricingOverrides
+    .filter((p) => p.tradeServiceId === null || !tradeIds.has(p.tradeServiceId))
+    .map((p) => ({
+      label: p.label,
+      priceText: p.priceText,
+      shareable: p.shareable,
+      evidenceQuote: p.evidence.quote,
+    }));
+
   // Redlines union by id — trade pack first so an overlay entry with the
   // same id can never weaken a platform rule.
   const redlineById = new Map<string, { id: string; rule: string }>();
@@ -114,6 +149,7 @@ export function mergePacks(
     businessName: overlay.businessName,
     services,
     customServices,
+    generalPricing,
     emergencyScripts: trade.emergency_scripts,
     terminologyMap: trade.terminology_map,
     redlines: [...redlineById.values()],

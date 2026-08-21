@@ -10,6 +10,15 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * JSON for interpolation into an inline <script> block. JSON.stringify alone
+ * does NOT neutralize "</script>" in the data — escape every "<" as a unicode
+ * escape so the tag can never be closed early (the standard safe pattern).
+ */
+function jsonForScript(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
 const BASE_CSS = `
   :root { --ink:#1a1f24; --muted:#5b6570; --line:#dfe4e9; --accent:#14532d; --accent-soft:#e7f2ea; --bg:#f6f7f8; }
   * { box-sizing: border-box; }
@@ -130,7 +139,7 @@ export function chatPage(session: Session, greeting: string): string {
   </div>
 </div>
 <script>
-const sessionId = ${JSON.stringify(session.id)};
+const sessionId = ${jsonForScript(session.id)};
 const thread = document.getElementById("thread");
 const composer = document.getElementById("composer");
 const input = document.getElementById("text");
@@ -165,7 +174,7 @@ function addXray(xray) {
 
 function scrollDown() { window.scrollTo(0, document.body.scrollHeight); }
 
-addMsg("receptionist", ${JSON.stringify(greeting)});
+addMsg("receptionist", ${jsonForScript(greeting)});
 
 composer.addEventListener("submit", async (e) => {
   e.preventDefault();

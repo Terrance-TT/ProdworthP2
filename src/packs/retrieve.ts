@@ -21,6 +21,29 @@ function words(s: string): string[] {
   return s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
 }
 
+/**
+ * Strips editorial annotations — "(common misuse)", "(when they actually
+ * mean …)" — that pack authors attach to synonyms and terminology phrases.
+ * They are notes for humans, not customer speech: left in, they can never
+ * match as a phrase and their words ("common", "misuse") pollute matching.
+ */
+function stripAnnotation(s: string): string {
+  return s.replace(/\s*\([^)]*\)/g, "").trim();
+}
+
+/**
+ * Normalizes a terminology-map customer_says phrase into matchable
+ * alternatives: annotations stripped, "/" treated as alternation
+ * ("water filter / water treatment" matches either phrase).
+ */
+function terminologyPhrases(customerSays: string): string[] {
+  return stripAnnotation(customerSays)
+    .toLowerCase()
+    .split("/")
+    .map((p) => p.trim())
+    .filter((p) => p.length >= 4);
+}
+
 export function retrieveSlice(
   pack: EffectivePack,
   question: string
@@ -33,8 +56,9 @@ export function retrieveSlice(
   const qWords = words(q).filter((w) => w.length >= 4);
   const scored = pack.services
     .map((s) => {
+      const synonyms = s.synonyms.map(stripAnnotation);
       const haystack =
-        `${s.id} ${s.name} ${s.synonyms.join(" ")} ${s.description}`.toLowerCase();
+        `${s.id} ${s.name} ${synonyms.join(" ")} ${s.description}`.toLowerCase();
       const hWords = new Set(words(haystack).filter((w) => w.length >= 4));
       let score = 0;
       for (const w of qWords) {
@@ -49,8 +73,9 @@ export function retrieveSlice(
         }
       }
       // Exact synonym phrase match is a strong signal.
-      for (const syn of s.synonyms) {
-        if (syn.length >= 4 && q.includes(syn.toLowerCase())) score += 3;
+      for (const syn of synonyms) {
+        const s = syn.toLowerCase();
+        if (s.length >= 4 && q.includes(s)) score += 3;
       }
       if (q.includes(s.name.toLowerCase())) score += 3;
       return { s, score };
@@ -74,17 +99,22 @@ export function retrieveSlice(
   }
 
   // Terminology map: first entry whose lay phrase appears in the message.
+  // Phrases are normalized (annotations stripped, "/" = alternation) so
+  // entries like "sump pump (when they actually mean…)" can match at all.
   let terminologyClarification: string | undefined;
   for (const entry of pack.terminologyMap) {
-    const phrase = entry.customer_says.toLowerCase();
-    if (phrase.length >= 4 && q.includes(phrase)) {
+    if (terminologyPhrases(entry.customer_says).some((p) => q.includes(p))) {
       terminologyClarification = entry.clarify_with;
       break;
     }
   }
 
+  // Area phrasing only — "cover" alone also matches insurance-coverage
+  // questions ("does insurance cover this?"), which are NOT area questions.
   const mentionsArea =
-    /area|cover|service (in|to)|town|city|come to|do you (go|travel)/.test(q) ||
+    /area|town|city|come to|service (in|to)|do you (go|travel|cover|serve)|cover (my|your|the) (area|zip|town|city|county|neighbou?rhood)/.test(
+      q
+    ) ||
     (pack.serviceArea !== undefined &&
       pack.serviceArea
         .toLowerCase()
@@ -145,6 +175,14 @@ export function formatSlice(
   }
   if (pack.customServices.length > 0) {
     lines.push(`Also offered by this business: ${pack.customServices.join(", ")}.`);
+  }
+  const shareableFees = pack.generalPricing.filter((g) => g.shareable);
+  if (shareableFees.length > 0) {
+    lines.push(
+      `Published by the business (share exactly as written, never as an exact total for their job): ${shareableFees
+        .map((g) => `${g.label}: ${g.priceText}`)
+        .join("; ")}.`
+    );
   }
   return lines.join("\n");
 }

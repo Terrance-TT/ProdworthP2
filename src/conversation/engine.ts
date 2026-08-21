@@ -17,6 +17,7 @@ import {
   slotOfferDraft,
   collectLocationPrompt,
 } from "./prompts.js";
+import { SAFE_FALLBACK } from "../guardrails/redlines.js";
 import type { Session, XRay } from "../playground/session.js";
 
 const SLOT_COUNT = 3;
@@ -179,13 +180,19 @@ export class PlaygroundEngine {
       (slice.mentionsArea && pack.serviceArea !== undefined) ||
       (slice.mentionsHours && pack.hours !== undefined);
     if (!hasFacts) return this.handoff(session);
+    // The model may not invent times in its free text either — check the
+    // draft itself, not just the structured slot field.
+    if (this.violatesScheduling(session, out.draft_reply)) {
+      xray.redlineHits.push("no_invented_scheduling");
+      return SAFE_FALLBACK;
+    }
     return out.draft_reply;
   }
 
   private async onTimeProposed(
     session: Session,
     text: string,
-    _xray: XRay
+    xray: XRay
   ): Promise<string> {
     const { llm } = this.deps;
     const pack = session.pack;
@@ -223,6 +230,12 @@ export class PlaygroundEngine {
       return `Great, you're pencilled in for ${slot.label}. What's the service address?`;
     }
 
+    // The draft is LLM free text: an invented time here would ride alongside
+    // the real slot offer, so check it before composing.
+    if (this.violatesScheduling(session, out.draft_reply)) {
+      xray.redlineHits.push("no_invented_scheduling");
+      return SAFE_FALLBACK;
+    }
     return `${out.draft_reply} ${slotOfferDraft(slots)}`;
   }
 
@@ -250,6 +263,13 @@ export class PlaygroundEngine {
       return "Sorry, I didn't catch an address there — what's the street address for the visit?";
     }
 
+    // An "address" is model-extracted text — a model can smuggle an invented
+    // arrival time into it. Refuse and re-ask rather than booking it in.
+    if (this.violatesScheduling(session, out.address)) {
+      xray.redlineHits.push("no_invented_scheduling");
+      return "Sorry, I need just the street address — what's the address for the visit?";
+    }
+
     // time_confirmed → location_collected → booked, in code.
     let state = transition(session.state, "location_given");
     state = transition(state, "booking_made");
@@ -266,6 +286,16 @@ export class PlaygroundEngine {
   }
 
   /* ----------------------------- helpers ------------------------------ */
+
+  /**
+   * Checks LLM-controlled text (draft replies, extracted addresses) against
+   * the pack's no_invented_scheduling rule. Deterministic engine text (slot
+   * offers, confirmations) is never checked — it only states times that came
+   * from the availability helper.
+   */
+  private violatesScheduling(session: Session, text: string): boolean {
+    return session.filter.violatesLlmRule(text, "no_invented_scheduling");
+  }
 
   private resolveService(
     pack: EffectivePack,
